@@ -84,6 +84,16 @@ export function useNav() {
     useUserStoreHook().logOut();
   }
 
+  /** 账号管理（打开弹窗） */
+  function goProfile() {
+    emitter.emit("openProfileDialog");
+  }
+
+  /** 修改密码 */
+  function goChangePassword() {
+    router.push("/personal/change-password");
+  }
+
   function backTopMenu() {
     router.push(getTopMenu()?.path);
   }
@@ -132,6 +142,8 @@ export function useNav() {
     device,
     layout,
     logout,
+    goProfile,
+    goChangePassword,
     routers,
     $storage,
     isFullscreen,

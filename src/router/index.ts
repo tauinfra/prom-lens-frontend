@@ -16,8 +16,9 @@ import {
 import {
   ascending,
   getTopMenu,
-  initRouter,
+  addPathMatch,
   isOneOfArray,
+  initRouter,
   getHistoryMode,
   findRouteByPath,
   handleAliveRoute,

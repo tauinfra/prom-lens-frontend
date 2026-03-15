@@ -12,6 +12,7 @@ import LaySidebarFullScreen from "../lay-sidebar/components/SidebarFullScreen.vu
 
 import LogoutCircleRLine from "~icons/ri/logout-circle-r-line";
 import Setting from "~icons/ri/settings-3-line";
+import UserLine from "~icons/ri/user-line";
 
 const menuRef = ref();
 const showLogo = ref(
@@ -24,6 +25,7 @@ const {
   route,
   title,
   logout,
+  goProfile,
   onPanel,
   getLogo,
   username,
@@ -85,6 +87,10 @@ onMounted(() => {
         </span>
         <template #dropdown>
           <el-dropdown-menu class="logout">
+            <el-dropdown-item @click="goProfile">
+              <IconifyIconOffline :icon="UserLine" style="margin: 5px" />
+              账号管理
+            </el-dropdown-item>
             <el-dropdown-item @click="logout">
               <IconifyIconOffline
                 :icon="LogoutCircleRLine"

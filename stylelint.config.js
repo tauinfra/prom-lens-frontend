@@ -71,11 +71,11 @@ export default {
         "at-rules",
         "declarations",
         {
-          type: "at-rule",
+          type: "at-role",
           name: "supports"
         },
         {
-          type: "at-rule",
+          type: "at-role",
           name: "media"
         },
         "rules"

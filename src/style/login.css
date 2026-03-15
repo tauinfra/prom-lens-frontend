@@ -43,6 +43,11 @@
   height: 80px;
 }
 
+.kubernetes {
+  width: 350px !important;
+  height: 80px !important;
+}
+
 .login-form h2 {
   text-transform: uppercase;
   margin: 15px 0;

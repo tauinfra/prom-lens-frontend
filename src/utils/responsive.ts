@@ -6,6 +6,7 @@ import { responsiveStorageNameSpace } from "@/config";
 
 export const injectResponsiveStorage = (app: App, config: PlatformConfigs) => {
   const nameSpace = responsiveStorageNameSpace();
+  const storedConfigure = Storage.getData("configure", nameSpace) ?? {};
   const configObj = Object.assign(
     {
       // layout模式以及主题
@@ -19,15 +20,17 @@ export const injectResponsiveStorage = (app: App, config: PlatformConfigs) => {
         overallStyle: config.OverallStyle ?? "light" // 整体风格（浅色：light、深色：dark、自动：system）
       },
       // 系统配置-界面显示
-      configure: Storage.getData("configure", nameSpace) ?? {
+      configure: {
         grey: config.Grey ?? false,
         weak: config.Weak ?? false,
         hideTabs: config.HideTabs ?? false,
         hideFooter: config.HideFooter ?? true,
         showLogo: config.ShowLogo ?? true,
         showModel: config.ShowModel ?? "smart",
-        multiTagsCache: config.MultiTagsCache ?? false,
-        stretch: config.Stretch ?? false
+        stretch: config.Stretch ?? false,
+        ...storedConfigure,
+        // 允许平台配置强制开启标签缓存
+        multiTagsCache: config.MultiTagsCache ?? storedConfigure.multiTagsCache ?? false
       }
     },
     config.MultiTagsCache

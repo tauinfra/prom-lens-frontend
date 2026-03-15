@@ -10,8 +10,8 @@ import { useEventListener } from "@vueuse/core";
 import type { FormInstance } from "element-plus";
 import { useLayout } from "@/layout/hooks/useLayout";
 import { useUserStoreHook } from "@/store/modules/user";
-import { initRouter, getTopMenu } from "@/router/utils";
-import { bg, avatar, illustration } from "./utils/static";
+import { initRouter, getTopMenu, addPathMatch } from "@/router/utils";
+import { bg, avatar, illustration, kubernetes } from "./utils/static";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { useDataThemeChange } from "@/layout/hooks/useDataThemeChange";
 
@@ -38,7 +38,7 @@ const { title } = useNav();
 
 const ruleForm = reactive({
   username: "admin",
-  password: "admin123"
+  password: "admin"
 });
 
 const onLogin = async (formEl: FormInstance | undefined) => {
@@ -53,18 +53,14 @@ const onLogin = async (formEl: FormInstance | undefined) => {
         })
         .then(res => {
           if (res.success) {
-            // 获取后端路由
-            return initRouter().then(() => {
-              disabled.value = true;
-              router
-                .push(getTopMenu(true).path)
-                .then(() => {
-                  message("登录成功", { type: "success" });
-                })
-                .finally(() => (disabled.value = false));
+            initRouter().then(() => {
+              addPathMatch();
+              router.push(getTopMenu(true).path);
             });
+            message(`欢迎 '${ruleForm.username}' 登录成功！`, { type: "success" });
+            loading.value = false;
           } else {
-            message("登录失败", { type: "error" });
+            message(res.msg, { type: "error" });
           }
         })
         .finally(() => (loading.value = false));
@@ -107,7 +103,7 @@ useEventListener(document, "keydown", ({ code }) => {
       </div>
       <div class="login-box">
         <div class="login-form">
-          <avatar class="avatar" />
+          <kubernetes class="avatar" />
           <Motion>
             <h2 class="outline-hidden">{{ title }}</h2>
           </Motion>

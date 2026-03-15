@@ -14,6 +14,7 @@ import {
   computed,
   onMounted,
   onBeforeMount,
+  onBeforeUnmount,
   defineComponent
 } from "vue";
 import {
@@ -27,11 +28,14 @@ import LayTag from "./components/lay-tag/index.vue";
 import LayNavbar from "./components/lay-navbar/index.vue";
 import LayContent from "./components/lay-content/index.vue";
 import LaySetting from "./components/lay-setting/index.vue";
+import ProfileDialog from "./components/ProfileDialog/index.vue";
 import NavVertical from "./components/lay-sidebar/NavVertical.vue";
 import NavHorizontal from "./components/lay-sidebar/NavHorizontal.vue";
 import BackTopIcon from "@/assets/svg/back_top.svg?component";
+import { emitter } from "@/utils/mitt";
 
 const appWrapperRef = ref();
+const profileDialogVisible = ref(false);
 const { isDark } = useDark();
 const { layout } = useLayout();
 const isMobile = deviceDetection();
@@ -118,6 +122,13 @@ onMounted(() => {
   if (isMobile) {
     toggle("mobile", false);
   }
+  emitter.on("openProfileDialog", () => {
+    profileDialogVisible.value = true;
+  });
+});
+
+onBeforeUnmount(() => {
+  emitter.off("openProfileDialog");
 });
 
 onBeforeMount(() => {
@@ -198,6 +209,8 @@ const LayHeader = defineComponent({
     </div>
     <!-- 系统设置 -->
     <LaySetting />
+    <!-- 账号管理弹窗 -->
+    <ProfileDialog v-model="profileDialogVisible" />
   </div>
 </template>
 

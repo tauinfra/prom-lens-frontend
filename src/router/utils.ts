@@ -30,6 +30,7 @@ const modulesRoutes = import.meta.glob("/src/views/**/*.{vue,tsx}");
 import { getAsyncRoutes } from "@/api/routes";
 
 function handRank(routeInfo: any) {
+  if (!routeInfo) return false;
   const { name, path, parentId, meta } = routeInfo;
   return isAllEmpty(parentId)
     ? isAllEmpty(meta?.rank) ||
@@ -41,11 +42,12 @@ function handRank(routeInfo: any) {
 
 /** 按照路由中meta下的rank等级升序来排序路由 */
 function ascending(arr: any[]) {
-  arr.forEach((v, index) => {
+  const safeArr = arr.filter(Boolean);
+  safeArr.forEach((v, index) => {
     // 当rank不存在时，根据顺序自动创建，首页路由永远在第一位
     if (handRank(v)) v.meta.rank = index + 2;
   });
-  return arr.sort(
+  return safeArr.sort(
     (a: { meta: { rank: number } }, b: { meta: { rank: number } }) => {
       return a?.meta.rank - b?.meta.rank;
     }
@@ -214,6 +216,7 @@ function initRouter() {
   } else {
     return new Promise(resolve => {
       getAsyncRoutes().then(({ data }) => {
+        console.log("【后端返回 asyncRoutes】", data)
         handleAsyncRoutes(cloneDeep(data));
         resolve(router);
       });
@@ -316,10 +319,21 @@ function addAsyncRoutes(arrRoutes: Array<RouteRecordRaw>) {
     if (v.meta?.frameSrc) {
       v.component = IFrame;
     } else {
-      // 对后端传component组件路径和不传做兼容（如果后端传component组件路径，那么path可以随便写，如果不传，component组件路径会跟path保持一致）
-      const index = v?.component
-        ? modulesRoutesKeys.findIndex(ev => ev.includes(v.component as any))
-        : modulesRoutesKeys.findIndex(ev => ev.includes(v.path));
+      // 按 path 强制指定组件，避免后端配错导致 ingress 等页显示错误数据
+      const pathComponentMap: Record<string, string> = {
+        "/kubernetes/network/ingress": "kubernetes/network/ingress/index.vue",
+        "/kubernetes/clusters/:id/namespaces/:namespace/ingresses/:name/detail": "kubernetes/network/ingress/components/detail.vue"
+      };
+      const forcedComponent = pathComponentMap[v.path];
+      let index = -1;
+      if (forcedComponent !== undefined) {
+        index = modulesRoutesKeys.findIndex(ev => ev.includes(forcedComponent));
+      }
+      if (index === -1) {
+        index = v?.component
+          ? modulesRoutesKeys.findIndex(ev => ev.includes(v.component as any))
+          : modulesRoutesKeys.findIndex(ev => ev.includes(v.path));
+      }
       v.component = modulesRoutes[modulesRoutesKeys[index]];
     }
     if (v?.children && v.children.length) {

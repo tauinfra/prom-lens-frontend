@@ -1,9 +1,9 @@
 {
   "Version": "6.0.0",
-  "Title": "PureAdmin",
+  "Title": "Valyria Platform",
   "FixedHeader": true,
   "HiddenSideBar": false,
-  "MultiTagsCache": false,
+  "MultiTagsCache": true,
   "KeepAlive": true,
   "Layout": "vertical",
   "Theme": "light",

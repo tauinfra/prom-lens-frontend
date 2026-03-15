@@ -26,16 +26,16 @@ defineOptions({
             拥有code：'permission:btn:add' 权限可见
           </el-button>
         </Perms>
-        <Perms :value="['permission:btn:edit']">
+        <Perms :value="['authz:btn:edit']">
           <el-button plain type="primary">
             拥有code：['permission:btn:edit'] 权限可见
           </el-button>
         </Perms>
         <Perms
           :value="[
-            'permission:btn:add',
-            'permission:btn:edit',
-            'permission:btn:delete'
+            'authz:btn:add',
+            'authz:btn:edit',
+            'authz:btn:delete'
           ]"
         >
           <el-button plain type="danger">
@@ -51,11 +51,11 @@ defineOptions({
         <div class="card-header">函数方式判断权限</div>
       </template>
       <el-space wrap>
-        <el-button v-if="hasPerms('permission:btn:add')" plain type="warning">
+        <el-button v-if="hasPerms('authz:btn:add')" plain type="warning">
           拥有code：'permission:btn:add' 权限可见
         </el-button>
         <el-button
-          v-if="hasPerms(['permission:btn:edit'])"
+          v-if="hasPerms(['authz:btn:edit'])"
           plain
           type="primary"
         >
@@ -64,9 +64,9 @@ defineOptions({
         <el-button
           v-if="
             hasPerms([
-              'permission:btn:add',
-              'permission:btn:edit',
-              'permission:btn:delete'
+              'authz:btn:add',
+              'authz:btn:edit',
+              'authz:btn:delete'
             ])
           "
           plain
@@ -85,17 +85,17 @@ defineOptions({
         </div>
       </template>
       <el-space wrap>
-        <el-button v-perms="'permission:btn:add'" plain type="warning">
+        <el-button v-perms="'authz:btn:add'" plain type="warning">
           拥有code：'permission:btn:add' 权限可见
         </el-button>
-        <el-button v-perms="['permission:btn:edit']" plain type="primary">
+        <el-button v-perms="['authz:btn:edit']" plain type="primary">
           拥有code：['permission:btn:edit'] 权限可见
         </el-button>
         <el-button
           v-perms="[
-            'permission:btn:add',
-            'permission:btn:edit',
-            'permission:btn:delete'
+            'authz:btn:add',
+            'authz:btn:edit',
+            'authz:btn:delete'
           ]"
           plain
           type="danger"

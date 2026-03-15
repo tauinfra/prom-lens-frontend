@@ -13,6 +13,7 @@ import { stringify } from "qs";
 import NProgress from "../progress";
 import { getToken, formatToken } from "@/utils/auth";
 import { useUserStoreHook } from "@/store/modules/user";
+import {message} from "@/utils/message";
 
 // 相关配置请参考：www.axios-js.com/zh-cn/docs/#axios-request-config-1
 const defaultConfig: AxiosRequestConfig = {
@@ -84,16 +85,16 @@ class PureHttp {
                 if (expired) {
                   if (!PureHttp.isRefreshing) {
                     PureHttp.isRefreshing = true;
-                    // token过期刷新
                     useUserStoreHook()
                       .handRefreshToken({ refreshToken: data.refreshToken })
                       .then(res => {
-                        const token = res.data.accessToken;
+                        const token = res.accessToken;
                         config.headers["Authorization"] = formatToken(token);
                         PureHttp.requests.forEach(cb => cb(token));
                         PureHttp.requests = [];
                       })
                       .finally(() => {
+                        console.log('res')
                         PureHttp.isRefreshing = false;
                       });
                   }
@@ -132,6 +133,19 @@ class PureHttp {
           PureHttp.initConfig.beforeResponseCallback(response);
           return response.data;
         }
+
+        // 统一处理 Kubernetes GET 接口业务失败：success !== true 时抛出后端 msg
+        const responseData = response.data as { success?: boolean; msg?: string } | undefined;
+        const requestMethod = ($config.method || "").toLowerCase();
+        const requestUrl = $config.url || "";
+        const isKubeGetRequest =
+          requestMethod === "get" && requestUrl.startsWith("/api/v1/kubernetes");
+        const hasSuccessField =
+          !!responseData && Object.prototype.hasOwnProperty.call(responseData, "success");
+        if (isKubeGetRequest && hasSuccessField && responseData?.success !== true) {
+          return Promise.reject({ msg: responseData?.msg || "获取数据失败" });
+        }
+
         return response.data;
       },
       (error: PureHttpError) => {
@@ -139,6 +153,15 @@ class PureHttp {
         $error.isCancelRequest = Axios.isCancel($error);
         // 关闭进度条动画
         NProgress.done();
+
+        if ($error.response) {
+          // 从错误响应中提取消息
+          const errorData = ($error.response.data as { msg?: string }) || {};
+          const errorMsg = errorData.msg ||
+            `请求错误: ${$error.response.status} ${$error.response.statusText}`;
+          // 显示错误消息
+          message(errorMsg, { type: "error" });
+        }
         // 所有的响应异常 区分来源为取消请求/非取消请求
         return Promise.reject($error);
       }

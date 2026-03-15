@@ -32,7 +32,7 @@ interface MessageParams {
   onClose?: Function | null;
 }
 
-/** 用法非常简单，参考 src/views/components/message/index.vue 文件 */
+/** 用法非常简单，参考 src/views/components/message/environment.vue 文件 */
 
 /**
  * `Message` 消息提示函数
@@ -86,4 +86,30 @@ const message = (
  */
 const closeAllMessage = (): void => ElMessage.closeAll();
 
-export { message, closeAllMessage };
+/**
+ * 从接口错误中提取提示文案：优先 response.data.msg，其次 error.msg / Error.message，最后兜底
+ * 后端所有接口错误统一用此函数取提示信息
+ */
+const getErrorMessage = (error: unknown): string => {
+  if (typeof error === "string") return error;
+  const err = error as { response?: { data?: { msg?: string } }; msg?: string };
+  return (
+    err?.response?.data?.msg ??
+    err?.msg ??
+    (error instanceof Error ? error.message : null) ??
+    "获取数据失败"
+  );
+};
+
+/**
+ * 使用 getErrorMessage 并弹出错误提示，默认 type: error、duration: 5000
+ */
+const showApiError = (error: unknown, params?: MessageParams): void => {
+  message(getErrorMessage(error), {
+    type: "error",
+    duration: 5000,
+    ...params
+  });
+};
+
+export { message, closeAllMessage, getErrorMessage, showApiError };

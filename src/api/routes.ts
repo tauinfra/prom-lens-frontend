@@ -1,4 +1,5 @@
 import { http } from "@/utils/http";
+import { authnUrlApi } from "./utils";
 
 type Result = {
   success: boolean;
@@ -6,5 +7,5 @@ type Result = {
 };
 
 export const getAsyncRoutes = () => {
-  return http.request<Result>("get", "/get-async-routes");
+  return http.request<Result>("get", authnUrlApi("/me/routes"));
 };

@@ -88,15 +88,18 @@ export const useUserStore = defineStore("pure-user", {
     },
     /** 刷新`token` */
     async handRefreshToken(data) {
-      return new Promise<RefreshTokenResult>((resolve, reject) => {
-        refreshTokenApi(data)
-          .then(data => {
-            if (data) {
-              setToken(data.data);
-              resolve(data);
+      return new Promise<RefreshTokenResult["data"]>((resolve, reject) => {
+        refreshTokenApi(data.refreshToken)
+          .then(result => {
+            if (result?.success && result?.data?.accessToken) {
+              setToken(result.data);
+              resolve(result.data);
+              return;
             }
+            reject({ msg: result?.msg || "刷新 Token 失败" });
           })
           .catch(error => {
+            this.logOut()
             reject(error);
           });
       });
