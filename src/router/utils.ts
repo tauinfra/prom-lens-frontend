@@ -16,18 +16,11 @@ import {
   storageLocal,
   isIncludeAllChildren
 } from "@pureadmin/utils";
-import { getConfig } from "@/config";
 import { buildHierarchyTree } from "@/utils/tree";
 import { userKey, type DataInfo } from "@/utils/auth";
 import { type menuType, routerArrays } from "@/layout/types";
 import { useMultiTagsStoreHook } from "@/store/modules/multiTags";
 import { usePermissionStoreHook } from "@/store/modules/permission";
-const IFrame = () => import("@/layout/frame.vue");
-// https://cn.vitejs.dev/guide/features.html#glob-import
-const modulesRoutes = import.meta.glob("/src/views/**/*.{vue,tsx}");
-
-// 动态路由
-import { getAsyncRoutes } from "@/api/routes";
 
 function handRank(routeInfo: any) {
   if (!routeInfo) return false;
@@ -87,9 +80,12 @@ function isOneOfArray(a: Array<string>, b: Array<string>) {
 function filterNoPermissionTree(data: RouteComponent[]) {
   const currentRoles =
     storageLocal().getItem<DataInfo<number>>(userKey)?.roles ?? [];
-  const newTree = cloneDeep(data).filter((v: any) =>
-    isOneOfArray(v.meta?.roles, currentRoles)
-  );
+  const isSuperuser =
+    storageLocal().getItem<DataInfo<number>>(userKey)?.isSuperuser === true;
+  const newTree = cloneDeep(data).filter((v: any) => {
+    if (v.meta?.requireSuperuser && !isSuperuser) return false;
+    return isOneOfArray(v.meta?.roles, currentRoles);
+  });
   newTree.forEach(
     (v: any) => v.children && (v.children = filterNoPermissionTree(v.children))
   );
@@ -151,37 +147,10 @@ function addPathMatch() {
   }
 }
 
-/** 处理动态路由（后端返回的路由） */
-function handleAsyncRoutes(routeList) {
-  if (routeList.length === 0) {
-    usePermissionStoreHook().handleWholeMenus(routeList);
-  } else {
-    formatFlatteningRoutes(addAsyncRoutes(routeList)).map(
-      (v: RouteRecordRaw) => {
-        // 防止重复添加路由
-        if (
-          router.options.routes[0].children.findIndex(
-            value => value.path === v.path
-          ) !== -1
-        ) {
-          return;
-        } else {
-          // 切记将路由push到routes后还需要使用addRoute，这样路由才能正常跳转
-          router.options.routes[0].children.push(v);
-          // 最终路由进行升序
-          ascending(router.options.routes[0].children);
-          if (!router.hasRoute(v?.name)) router.addRoute(v);
-          const flattenRouters: any = router
-            .getRoutes()
-            .find(n => n.path === "/");
-          // 保持router.options.routes[0].children与path为"/"的children一致，防止数据不一致导致异常
-          flattenRouters.children = router.options.routes[0].children;
-          router.addRoute(flattenRouters);
-        }
-      }
-    );
-    usePermissionStoreHook().handleWholeMenus(routeList);
-  }
+/** 初始化静态路由菜单 */
+function initStaticMenus() {
+  storageLocal().removeItem("async-routes");
+  usePermissionStoreHook().handleWholeMenus([]);
   if (!useMultiTagsStoreHook().getMultiTagsCache) {
     useMultiTagsStoreHook().handleTags("equal", [
       ...routerArrays,
@@ -193,35 +162,12 @@ function handleAsyncRoutes(routeList) {
   addPathMatch();
 }
 
-/** 初始化路由（`new Promise` 写法防止在异步请求中造成无限循环）*/
+/** 初始化路由（仅使用 src/router/modules 下的静态路由） */
 function initRouter() {
-  if (getConfig()?.CachingAsyncRoutes) {
-    // 开启动态路由缓存本地localStorage
-    const key = "async-routes";
-    const asyncRouteList = storageLocal().getItem(key) as any;
-    if (asyncRouteList && asyncRouteList?.length > 0) {
-      return new Promise(resolve => {
-        handleAsyncRoutes(asyncRouteList);
-        resolve(router);
-      });
-    } else {
-      return new Promise(resolve => {
-        getAsyncRoutes().then(({ data }) => {
-          handleAsyncRoutes(cloneDeep(data));
-          storageLocal().setItem(key, data);
-          resolve(router);
-        });
-      });
-    }
-  } else {
-    return new Promise(resolve => {
-      getAsyncRoutes().then(({ data }) => {
-        console.log("【后端返回 asyncRoutes】", data)
-        handleAsyncRoutes(cloneDeep(data));
-        resolve(router);
-      });
-    });
-  }
+  return new Promise(resolve => {
+    initStaticMenus();
+    resolve(router);
+  });
 }
 
 /**
@@ -303,46 +249,6 @@ function handleAliveRoute({ name }: ToRouteType, mode?: string) {
   }
 }
 
-/** 过滤后端传来的动态路由 重新生成规范路由 */
-function addAsyncRoutes(arrRoutes: Array<RouteRecordRaw>) {
-  if (!arrRoutes || !arrRoutes.length) return;
-  const modulesRoutesKeys = Object.keys(modulesRoutes);
-  arrRoutes.forEach((v: RouteRecordRaw) => {
-    // 将backstage属性加入meta，标识此路由为后端返回路由
-    v.meta.backstage = true;
-    // 父级的redirect属性取值：如果子级存在且父级的redirect属性不存在，默认取第一个子级的path；如果子级存在且父级的redirect属性存在，取存在的redirect属性，会覆盖默认值
-    if (v?.children && v.children.length && !v.redirect)
-      v.redirect = v.children[0].path;
-    // 父级的name属性取值：如果子级存在且父级的name属性不存在，默认取第一个子级的name；如果子级存在且父级的name属性存在，取存在的name属性，会覆盖默认值（注意：测试中发现父级的name不能和子级name重复，如果重复会造成重定向无效（跳转404），所以这里给父级的name起名的时候后面会自动加上`Parent`，避免重复）
-    if (v?.children && v.children.length && !v.name)
-      v.name = (v.children[0].name as string) + "Parent";
-    if (v.meta?.frameSrc) {
-      v.component = IFrame;
-    } else {
-      // 按 path 强制指定组件，避免后端配错导致 ingress 等页显示错误数据
-      const pathComponentMap: Record<string, string> = {
-        "/kubernetes/network/ingress": "kubernetes/network/ingress/index.vue",
-        "/kubernetes/clusters/:id/namespaces/:namespace/ingresses/:name/detail": "kubernetes/network/ingress/components/detail.vue"
-      };
-      const forcedComponent = pathComponentMap[v.path];
-      let index = -1;
-      if (forcedComponent !== undefined) {
-        index = modulesRoutesKeys.findIndex(ev => ev.includes(forcedComponent));
-      }
-      if (index === -1) {
-        index = v?.component
-          ? modulesRoutesKeys.findIndex(ev => ev.includes(v.component as any))
-          : modulesRoutesKeys.findIndex(ev => ev.includes(v.path));
-      }
-      v.component = modulesRoutes[modulesRoutesKeys[index]];
-    }
-    if (v?.children && v.children.length) {
-      addAsyncRoutes(v.children);
-    }
-  });
-  return arrRoutes;
-}
-
 /** 获取路由历史模式 https://next.router.vuejs.org/zh/guide/essentials/history-mode.html */
 function getHistoryMode(routerHistory): RouterHistory {
   // len为1 代表只有历史模式 为2 代表历史模式中存在base参数 https://next.router.vuejs.org/zh/api/#%E5%8F%82%E6%95%B0-1
@@ -414,7 +320,6 @@ export {
   addPathMatch,
   isOneOfArray,
   getHistoryMode,
-  addAsyncRoutes,
   getParentPaths,
   findRouteByPath,
   handleAliveRoute,

@@ -1,25 +1,14 @@
-const { VITE_HIDE_HOME } = import.meta.env;
 const Layout = () => import("@/layout/index.vue");
 
 export default {
   path: "/",
   name: "Home",
   component: Layout,
-  redirect: "/dashboard",
+  redirect: "/prometheus/alerting-groups",
   meta: {
-    icon: "ep/home-filled",
-    title: "控制面板",
+    title: "Prometheus",
+    showLink: false,
     rank: 0
   },
-  children: [
-    {
-      path: "/dashboard",
-      name: "Dashboard",
-      component: () => import("@/views/dashboard/index.vue"),
-      meta: {
-        title: "控制面板",
-        showLink: VITE_HIDE_HOME === "true" ? false : true
-      }
-    }
-  ]
+  children: []
 } satisfies RouteConfigsTable;

@@ -16,7 +16,7 @@ import {
 import { useMultiTagsStoreHook } from "./multiTags";
 import { type DataInfo, setToken, removeToken, userKey } from "@/utils/auth";
 
-export const useUserStore = defineStore("pure-user", {
+export const useUserStore = defineStore("pure-users", {
   state: (): userType => ({
     // 头像
     avatar: storageLocal().getItem<DataInfo<number>>(userKey)?.avatar ?? "",
@@ -29,6 +29,8 @@ export const useUserStore = defineStore("pure-user", {
     // 按钮级别权限
     permissions:
       storageLocal().getItem<DataInfo<number>>(userKey)?.permissions ?? [],
+    isSuperuser:
+      storageLocal().getItem<DataInfo<number>>(userKey)?.isSuperuser ?? false,
     // 是否勾选了登录页的免登录
     isRemembered: false,
     // 登录页的免登录存储几天，默认7天
@@ -55,6 +57,9 @@ export const useUserStore = defineStore("pure-user", {
     SET_PERMS(permissions: Array<string>) {
       this.permissions = permissions;
     },
+    SET_IS_SUPERUSER(isSuperuser: boolean) {
+      this.isSuperuser = isSuperuser;
+    },
     /** 存储是否勾选了登录页的免登录 */
     SET_ISREMEMBERED(bool: boolean) {
       this.isRemembered = bool;
@@ -68,7 +73,12 @@ export const useUserStore = defineStore("pure-user", {
       return new Promise<UserResult>((resolve, reject) => {
         getLogin(data)
           .then(data => {
-            if (data?.success) setToken(data.data);
+            if (data?.success) {
+              setToken({
+                ...data.data,
+                expires: new Date(data.data.expires)
+              });
+            }
             resolve(data);
           })
           .catch(error => {
@@ -81,6 +91,7 @@ export const useUserStore = defineStore("pure-user", {
       this.username = "";
       this.roles = [];
       this.permissions = [];
+      this.isSuperuser = false;
       removeToken();
       useMultiTagsStoreHook().handleTags("equal", [...routerArrays]);
       resetRouter();
@@ -99,7 +110,7 @@ export const useUserStore = defineStore("pure-user", {
             reject({ msg: result?.msg || "刷新 Token 失败" });
           })
           .catch(error => {
-            this.logOut()
+            this.logOut();
             reject(error);
           });
       });

@@ -11,7 +11,7 @@ import type { FormInstance } from "element-plus";
 import { useLayout } from "@/layout/hooks/useLayout";
 import { useUserStoreHook } from "@/store/modules/user";
 import { initRouter, getTopMenu, addPathMatch } from "@/router/utils";
-import { bg, avatar, illustration, kubernetes } from "./utils/static";
+import { bg, avatar, illustration } from "./utils/static";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { useDataThemeChange } from "@/layout/hooks/useDataThemeChange";
 
@@ -57,7 +57,9 @@ const onLogin = async (formEl: FormInstance | undefined) => {
               addPathMatch();
               router.push(getTopMenu(true).path);
             });
-            message(`欢迎 '${ruleForm.username}' 登录成功！`, { type: "success" });
+            message(`欢迎 '${ruleForm.username}' 登录成功！`, {
+              type: "success"
+            });
             loading.value = false;
           } else {
             message(res.msg, { type: "error" });
@@ -103,7 +105,7 @@ useEventListener(document, "keydown", ({ code }) => {
       </div>
       <div class="login-box">
         <div class="login-form">
-          <kubernetes class="avatar" />
+          <component :is="toRaw(avatar)" class="avatar" />
           <Motion>
             <h2 class="outline-hidden">{{ title }}</h2>
           </Motion>

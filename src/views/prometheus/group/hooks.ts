@@ -1,3 +1,4 @@
+import { computed, onMounted } from "vue";
 import { isString, isEmpty } from "@pureadmin/utils";
 import { useMultiTagsStoreHook } from "@/store/modules/multiTags";
 import {
@@ -6,50 +7,93 @@ import {
   type LocationQueryRaw,
   type RouteParamsRaw
 } from "vue-router";
-import { onMounted } from "vue";
+import { PROM_GROUP_TYPES, type PromGroupType } from "../constants";
 
-export function useRules() {
+export function usePromGroupContext(options?: { restoreTag?: boolean }) {
   const route = useRoute();
   const router = useRouter();
   const getParameter = isEmpty(route.params) ? route.query : route.params;
 
-  function goToRules(
+  const groupType = computed<PromGroupType>(() => {
+    const metaType = route.meta.groupType as PromGroupType | undefined;
+    if (metaType) return metaType;
+    return route.path.includes("recording-groups")
+      ? PROM_GROUP_TYPES.RECORDING
+      : PROM_GROUP_TYPES.ALERTING;
+  });
+
+  const isRecording = computed(
+    () => groupType.value === PROM_GROUP_TYPES.RECORDING
+  );
+
+  const listRouteName = computed(() =>
+    isRecording.value ? "PromRecordingGroup" : "PromAlertingGroup"
+  );
+
+  const detailRouteName = computed(() =>
+    isRecording.value ? "PromRecord" : "PromAlertRule"
+  );
+
+  const detailTagTitle = computed(() =>
+    isRecording.value ? "聚合规则" : "告警规则"
+  );
+
+  const detailPathTemplate = computed(() =>
+    isRecording.value
+      ? "/prometheus/recording-groups/:id/records"
+      : "/prometheus/alerting-groups/:id/rules"
+  );
+
+  const listPath = computed(() =>
+    isRecording.value
+      ? "/prometheus/recording-groups"
+      : "/prometheus/alerting-groups"
+  );
+
+  function goToDetail(
     parameter: LocationQueryRaw | RouteParamsRaw,
     model: "query" | "params"
   ) {
-    // ⚠️ 这里要特别注意下，因为vue-router在解析路由参数的时候会自动转化成字符串类型，比如在使用useRoute().route.query或useRoute().route.params时，得到的参数都是字符串类型
-    // 所以在传参的时候，如果参数是数字类型，就需要在此处 toString() 一下，保证传参跟路由参数类型一致都是字符串，这是必不可少的环节！！！
     Object.keys(parameter).forEach(param => {
       if (!isString(parameter[param])) {
         parameter[param] = parameter[param].toString();
       }
     });
 
-    // 初始化时恢复标签页
-    onMounted(() => {
-      if (route.name === "PromRule" && !isEmpty(getParameter)) {
-        initToRules("params");
-      }
-    });
-
-
     if (model === "params") {
       useMultiTagsStoreHook().handleTags("push", {
-        name: "PromRule",
+        name: detailRouteName.value,
         params: parameter,
-        path: `/prometheus/groups/:id/rules`,
+        path: detailPathTemplate.value,
         meta: {
-          title: "Alerting Rules",
+          title: detailTagTitle.value
         }
       });
-      router.push({ name: "PromRule", params: parameter });
+      router.push({ name: detailRouteName.value, params: parameter });
     }
   }
 
-  // 用于页面刷新，重新获取浏览器地址栏参数并保存到标签页
-  const initToRules = (model: "params") => {
-    goToRules(getParameter, model);
-  };
+  if (options?.restoreTag) {
+    onMounted(() => {
+      if (
+        (route.name === "PromAlertRule" || route.name === "PromRecord") &&
+        !isEmpty(getParameter)
+      ) {
+        goToDetail(getParameter as RouteParamsRaw, "params");
+      }
+    });
+  }
 
-  return { goToRules, initToRules, getParameter, router };
+  return {
+    route,
+    router,
+    getParameter,
+    groupType,
+    isRecording,
+    listRouteName,
+    detailRouteName,
+    detailTagTitle,
+    listPath,
+    goToDetail
+  };
 }

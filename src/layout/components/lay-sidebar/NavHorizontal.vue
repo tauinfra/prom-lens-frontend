@@ -27,7 +27,6 @@ const {
   logout,
   goProfile,
   onPanel,
-  getLogo,
   username,
   userAvatar,
   backTopMenu,
@@ -55,7 +54,10 @@ onMounted(() => {
     class="horizontal-header"
   >
     <div v-if="showLogo" class="horizontal-header-left" @click="backTopMenu">
-      <img :src="getLogo()" alt="logo" />
+      <IconifyIconOffline
+        icon="logos/prometheus"
+        class="horizontal-header-logo"
+      />
       <span>{{ title }}</span>
     </div>
     <el-menu
@@ -125,5 +127,16 @@ onMounted(() => {
     flex-wrap: wrap;
     min-width: 100%;
   }
+}
+
+.horizontal-header-logo {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 8px;
+  font-size: 32px;
 }
 </style>

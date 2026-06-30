@@ -21,6 +21,8 @@ import "element-plus/dist/index.css";
 // 导入字体图标
 import "./assets/iconfont/iconfont.js";
 import "./assets/iconfont/iconfont.css";
+// 预加载离线 Iconify 图标（含侧边栏 Logo、菜单图标）
+import "@/components/ReIcon/src/offlineIcon";
 
 const app = createApp(App);
 

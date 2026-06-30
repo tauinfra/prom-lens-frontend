@@ -6,7 +6,7 @@ defineProps({
   collapse: Boolean
 });
 
-const { title, getLogo } = useNav();
+const { title } = useNav();
 </script>
 
 <template>
@@ -19,7 +19,7 @@ const { title, getLogo } = useNav();
         class="sidebar-logo-link"
         :to="getTopMenu()?.path ?? '/'"
       >
-        <img :src="getLogo()" alt="logo" />
+        <IconifyIconOffline icon="logos/prometheus" class="sidebar-logo-icon" />
         <span class="sidebar-title">{{ title }}</span>
       </router-link>
       <router-link
@@ -29,7 +29,7 @@ const { title, getLogo } = useNav();
         class="sidebar-logo-link"
         :to="getTopMenu()?.path ?? '/'"
       >
-        <img :src="getLogo()" alt="logo" />
+        <IconifyIconOffline icon="logos/prometheus" class="sidebar-logo-icon" />
         <span class="sidebar-title">{{ title }}</span>
       </router-link>
     </transition>
@@ -50,9 +50,14 @@ const { title, getLogo } = useNav();
     height: 100%;
     padding-left: 10px;
 
-    img {
-      display: inline-block;
+    .sidebar-logo-icon {
+      display: inline-flex;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
       height: 32px;
+      font-size: 32px;
     }
 
     .sidebar-title {

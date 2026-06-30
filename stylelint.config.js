@@ -63,25 +63,7 @@ export default {
         ignore: ["after-comment", "first-nested"]
       }
     ],
-    "unit-no-unknown": [true, { ignoreUnits: ["rpx"] }],
-    "order/order": [
-      [
-        "dollar-variables",
-        "custom-properties",
-        "at-rules",
-        "declarations",
-        {
-          type: "at-role",
-          name: "supports"
-        },
-        {
-          type: "at-role",
-          name: "media"
-        },
-        "rules"
-      ],
-      { severity: "warning" }
-    ]
+    "unit-no-unknown": [true, { ignoreUnits: ["rpx"] }]
   },
   ignoreFiles: ["**/*.js", "**/*.ts", "**/*.jsx", "**/*.tsx", "report.html"]
 };

@@ -37,7 +37,7 @@ export function useNav() {
     };
   });
 
-  /** 头像（如果头像为空则使用 src/assets/user.jpg ） */
+  /** 头像（如果头像为空则使用 src/assets/users.jpg ） */
   const userAvatar = computed(() => {
     return isAllEmpty(useUserStoreHook()?.avatar)
       ? Avatar
@@ -69,7 +69,7 @@ export function useNav() {
   });
 
   const title = computed(() => {
-    return $config.Title;
+    return $config?.Title ?? getConfig()?.Title ?? "Prom Lens";
   });
 
   /** 动态title */
@@ -91,7 +91,7 @@ export function useNav() {
 
   /** 修改密码 */
   function goChangePassword() {
-    router.push("/personal/change-password");
+    emitter.emit("openProfileDialog");
   }
 
   function backTopMenu() {
@@ -131,9 +131,8 @@ export function useNav() {
     return remainingPaths.includes(path);
   }
 
-  /** 获取`logo` */
   function getLogo() {
-    return new URL("/logo.svg", import.meta.url).href;
+    return `${import.meta.env.VITE_PUBLIC_PATH}logo.svg`;
   }
 
   return {

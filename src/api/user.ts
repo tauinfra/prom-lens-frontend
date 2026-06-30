@@ -1,7 +1,8 @@
 import { http } from "@/utils/http";
 import { authnUrlApi } from "./utils";
-import type { UserResult, RefreshTokenResult } from './types'
+import type { UserResult, RefreshTokenResult } from "./types";
 
+export type { UserResult, RefreshTokenResult } from "./types";
 
 /** 登录 */
 export const getLogin = (data?: object) => {
@@ -10,9 +11,13 @@ export const getLogin = (data?: object) => {
 
 /** 刷新`token` */
 export const refreshTokenApi = (refreshToken: string) => {
-  return http.request<RefreshTokenResult>("post", authnUrlApi("refresh-token"), {
-    headers: {
-      Authorization: `Bearer ${refreshToken}`
+  return http.request<RefreshTokenResult>(
+    "post",
+    authnUrlApi("refresh-token"),
+    {
+      headers: {
+        Authorization: `Bearer ${refreshToken}`
+      }
     }
-  });
+  );
 };

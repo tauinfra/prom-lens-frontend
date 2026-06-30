@@ -26,6 +26,8 @@ declare global {
     roles?: Array<string>;
     /** 按钮级别权限设置 `可选` */
     auths?: Array<string>;
+    /** 是否仅超级管理员可见 `可选` */
+    requireSuperuser?: boolean;
     /** 路由组件缓存（开启 `true`、关闭 `false`）`可选` */
     keepAlive?: boolean;
     /** 内嵌的`iframe`链接 `可选` */
@@ -56,6 +58,8 @@ declare global {
      * 而通过设置`activePath`指定激活菜单即可获得高亮，`activePath`为指定激活菜单的`path`）
      */
     activePath?: string;
+    /** Prometheus 规则组类型（与后端 type 字段一致） */
+    groupType?: "ALERTING RULES" | "ALERTING RECORDS";
   }
 
   /**

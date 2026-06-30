@@ -5,10 +5,10 @@ export const routerArrays: Array<RouteConfigs> =
   VITE_HIDE_HOME === "false"
     ? [
         {
-          path: "/welcome",
+          path: "/prometheus/alerting-groups",
           meta: {
-            title: "首页",
-            icon: "ep/home-filled"
+            title: "告警规则组",
+            icon: "logos/prometheus"
           }
         }
       ]
@@ -20,6 +20,7 @@ export type routeMetaType = {
   showLink?: boolean;
   savedPosition?: boolean;
   auths?: Array<string>;
+  requireSuperuser?: boolean;
 };
 
 export type RouteConfigs = {

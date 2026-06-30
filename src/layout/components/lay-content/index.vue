@@ -18,6 +18,8 @@ const isKeepAlive = computed(() => {
   return $config?.KeepAlive;
 });
 
+const cachePageList = computed(() => usePermissionStoreHook().cachePageList);
+
 const transitions = computed(() => {
   return route => {
     return route.meta.transition;
@@ -94,7 +96,6 @@ const transitionMain = defineComponent({
         leaveActiveClass: leaveTransition
           ? `animate__animated ${leaveTransition}`
           : undefined,
-        mode: "out-in",
         appear: true
       },
       {
@@ -138,10 +139,31 @@ const transitionMain = defineComponent({
               </el-backtop>
               <div class="grow">
                 <transitionMain :route="route">
-                  <keep-alive
-                    v-if="isKeepAlive"
-                    :include="usePermissionStoreHook().cachePageList"
-                  >
+                  <div v-if="Comp" :key="fullPath" class="route-page-wrap">
+                    <keep-alive v-if="isKeepAlive" :include="cachePageList">
+                      <component
+                        :is="Comp"
+                        :key="fullPath"
+                        :frameInfo="frameInfo"
+                        class="main-content"
+                      />
+                    </keep-alive>
+                    <component
+                      :is="Comp"
+                      v-else
+                      :key="fullPath"
+                      :frameInfo="frameInfo"
+                      class="main-content"
+                    />
+                  </div>
+                </transitionMain>
+              </div>
+              <LayFooter v-if="!hideFooter" />
+            </el-scrollbar>
+            <div v-else class="grow">
+              <transitionMain :route="route">
+                <div v-if="Comp" :key="fullPath" class="route-page-wrap">
+                  <keep-alive v-if="isKeepAlive" :include="cachePageList">
                     <component
                       :is="Comp"
                       :key="fullPath"
@@ -156,30 +178,7 @@ const transitionMain = defineComponent({
                     :frameInfo="frameInfo"
                     class="main-content"
                   />
-                </transitionMain>
-              </div>
-              <LayFooter v-if="!hideFooter" />
-            </el-scrollbar>
-            <div v-else class="grow">
-              <transitionMain :route="route">
-                <keep-alive
-                  v-if="isKeepAlive"
-                  :include="usePermissionStoreHook().cachePageList"
-                >
-                  <component
-                    :is="Comp"
-                    :key="fullPath"
-                    :frameInfo="frameInfo"
-                    class="main-content"
-                  />
-                </keep-alive>
-                <component
-                  :is="Comp"
-                  v-else
-                  :key="fullPath"
-                  :frameInfo="frameInfo"
-                  class="main-content"
-                />
+                </div>
               </transitionMain>
             </div>
           </template>
@@ -204,6 +203,10 @@ const transitionMain = defineComponent({
   position: relative;
   display: flex;
   flex-direction: column;
+  width: 100%;
+}
+
+.route-page-wrap {
   width: 100%;
 }
 

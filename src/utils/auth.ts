@@ -19,9 +19,11 @@ export interface DataInfo<T> {
   roles?: Array<string>;
   /** 当前登录用户的按钮级别权限 */
   permissions?: Array<string>;
+  /** 是否超级管理员（从 JWT su 声明解析） */
+  isSuperuser?: boolean;
 }
 
-export const userKey = "user-info";
+export const userKey = "users-info";
 export const TokenKey = "authorized-token";
 /**
  * 通过`multiple-tabs`是否在`cookie`中，判断用户是否已经登录系统，
@@ -30,6 +32,26 @@ export const TokenKey = "authorized-token";
  * 再次打开浏览器需要重新登录系统
  * */
 export const multipleTabsKey = "multiple-tabs";
+
+/** 从 accessToken JWT 解析超级管理员标识（后端字段 su） */
+export function parseTokenSuperuser(accessToken?: string): boolean {
+  if (!accessToken) return false;
+  try {
+    const payload = accessToken.split(".")[1];
+    if (!payload) return false;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const json = JSON.parse(atob(normalized)) as { su?: boolean };
+    return json.su === true;
+  } catch {
+    return false;
+  }
+}
+
+export function isSuperuser(): boolean {
+  return (
+    storageLocal().getItem<DataInfo<number>>(userKey)?.isSuperuser === true
+  );
+}
 
 /** 获取`token` */
 export function getToken(): DataInfo<number> {
@@ -43,7 +65,7 @@ export function getToken(): DataInfo<number> {
  * @description 设置`token`以及一些必要信息并采用无感刷新`token`方案
  * 无感刷新：后端返回`accessToken`（访问接口使用的`token`）、`refreshToken`（用于调用刷新`accessToken`的接口时所需的`token`，`refreshToken`的过期时间（比如30天）应大于`accessToken`的过期时间（比如2小时））、`expires`（`accessToken`的过期时间）
  * 将`accessToken`、`expires`、`refreshToken`这三条信息放在key值为authorized-token的cookie里（过期自动销毁）
- * 将`avatar`、`username`、`nickname`、`roles`、`permissions`、`refreshToken`、`expires`这七条信息放在key值为`user-info`的localStorage里（利用`multipleTabsKey`当浏览器完全关闭后自动销毁）
+ * 将`avatar`、`username`、`nickname`、`roles`、`permissions`、`refreshToken`、`expires`这七条信息放在key值为`users-info`的localStorage里（利用`multipleTabsKey`当浏览器完全关闭后自动销毁）
  */
 export function setToken(data: DataInfo<Date>) {
   let expires = 0;
@@ -68,12 +90,27 @@ export function setToken(data: DataInfo<Date>) {
       : {}
   );
 
-  function setUserKey({ avatar, username, nickname, roles, permissions }) {
+  function setUserKey({
+    avatar,
+    username,
+    nickname,
+    roles,
+    permissions,
+    isSuperuser: superuser
+  }: {
+    avatar: string;
+    username: string;
+    nickname: string;
+    roles: Array<string>;
+    permissions: Array<string>;
+    isSuperuser: boolean;
+  }) {
     useUserStoreHook().SET_AVATAR(avatar);
     useUserStoreHook().SET_USERNAME(username);
     useUserStoreHook().SET_NICKNAME(nickname);
     useUserStoreHook().SET_ROLES(roles);
     useUserStoreHook().SET_PERMS(permissions);
+    useUserStoreHook().SET_IS_SUPERUSER(superuser);
     storageLocal().setItem(userKey, {
       refreshToken,
       expires,
@@ -81,45 +118,55 @@ export function setToken(data: DataInfo<Date>) {
       username,
       nickname,
       roles,
-      permissions
+      permissions,
+      isSuperuser: superuser
     });
   }
 
-  if (data.username && data.roles) {
-    const { username, roles } = data;
+  const isSuperuserFlag = parseTokenSuperuser(accessToken);
+
+  if (data.username) {
     setUserKey({
       avatar: data?.avatar ?? "",
-      username,
+      username: data.username,
       nickname: data?.nickname ?? "",
-      roles,
-      permissions: data?.permissions ?? []
+      roles: data?.roles ?? [],
+      permissions: data?.permissions ?? [],
+      isSuperuser: isSuperuserFlag
     });
   } else {
-    const avatar =
-      storageLocal().getItem<DataInfo<number>>(userKey)?.avatar ?? "";
-    const username =
-      storageLocal().getItem<DataInfo<number>>(userKey)?.username ?? "";
-    const nickname =
-      storageLocal().getItem<DataInfo<number>>(userKey)?.nickname ?? "";
-    const roles =
-      storageLocal().getItem<DataInfo<number>>(userKey)?.roles ?? [];
-    const permissions =
-      storageLocal().getItem<DataInfo<number>>(userKey)?.permissions ?? [];
+    const prev = storageLocal().getItem<DataInfo<number>>(userKey);
     setUserKey({
-      avatar,
-      username,
-      nickname,
-      roles,
-      permissions
+      avatar: prev?.avatar ?? "",
+      username: prev?.username ?? "",
+      nickname: prev?.nickname ?? "",
+      roles: prev?.roles ?? [],
+      permissions: prev?.permissions ?? [],
+      isSuperuser: isSuperuserFlag
     });
   }
 }
 
-/** 删除`token`以及key值为`user-info`的localStorage信息 */
+/** 删除`token`以及key值为`users-info`的localStorage信息 */
 export function removeToken() {
   Cookies.remove(TokenKey);
   Cookies.remove(multipleTabsKey);
   storageLocal().removeItem(userKey);
+}
+
+/**
+ * 更新按钮级权限（与登录时结构一致：只替换 permissions，其它 users-info 字段保留）
+ * 用于刷新页面时与 GET /api/v1/authn/me/permissions 对齐
+ */
+export function syncUserPermissions(permissions: string[]) {
+  useUserStoreHook().SET_PERMS(permissions);
+  const prev = storageLocal().getItem<DataInfo<number>>(userKey);
+  if (prev) {
+    storageLocal().setItem(userKey, {
+      ...prev,
+      permissions
+    });
+  }
 }
 
 /** 格式化token（jwt格式） */

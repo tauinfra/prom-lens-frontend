@@ -9,7 +9,7 @@ export const REGEXP_PWD =
 const loginRules = reactive<FormRules>({
   // password: [
   //   {
-  //     validator: (role, value, callback) => {
+  //     validator: (roles, value, callback) => {
   //       if (value === "") {
   //         callback(new Error("请输入密码"));
   //       } else if (!REGEXP_PWD.test(value)) {

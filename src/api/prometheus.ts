@@ -11,7 +11,7 @@ export interface PaginationParams {
 }
 
 /** 查询规则组列表 */
-export const getGroups = (params: PaginationParams) => {
+export const getGroups = (params: PaginationParams & { type?: string }) => {
   return http.request("get", promUrlApi("groups"), { params });
 };
 
@@ -36,7 +36,10 @@ export const deleteGroup = (id: number) => {
 };
 
 /** 查询规则列表 */
-export const getRules = (groupId: string | string [], params: PaginationParams) => {
+export const getRules = (
+  groupId: string | string[],
+  params: PaginationParams
+) => {
   return http.request("get", promUrlApi(`groups/${groupId}/rules`), { params });
 };
 
@@ -46,8 +49,14 @@ export const createRule = (groupId: string | string[], data: object) => {
 };
 
 /** 更新规则 */
-export const updateRule = (groupId: string | string[], id: number, data: object) => {
-  return http.request("patch", promUrlApi(`groups/${groupId}/rules/${id}`), { data });
+export const updateRule = (
+  groupId: string | string[],
+  id: number,
+  data: object
+) => {
+  return http.request("patch", promUrlApi(`groups/${groupId}/rules/${id}`), {
+    data
+  });
 };
 
 /** 删除规则 */
@@ -55,47 +64,35 @@ export const deleteRule = (groupId: string | string[], id: number) => {
   return http.request("delete", promUrlApi(`groups/${groupId}/rules/${id}`));
 };
 
-/** 查询 Target Group 列表 */
-export const getTargetGroups = (params: PaginationParams) => {
-  return http.request("get", promUrlApi("target-groups"), { params });
+/** 查询聚合规则列表 */
+export const getRecords = (
+  groupId: string | string[],
+  params: PaginationParams
+) => {
+  return http.request("get", promUrlApi(`groups/${groupId}/records`), {
+    params
+  });
 };
 
-/** 查询 Target Group */
-export const getTargetGroup = (id: number) => {
-  return http.request("get", promUrlApi(`target-groups/${id}`));
+/** 创建聚合规则 */
+export const createRecord = (groupId: string | string[], data: object) => {
+  return http.request("post", promUrlApi(`groups/${groupId}/records`), {
+    data
+  });
 };
 
-/** 创建 Target Group */
-export const createTargetGroup = (data: object) => {
-  return http.request("post", promUrlApi("target-groups"), { data });
+/** 更新聚合规则 */
+export const updateRecord = (
+  groupId: string | string[],
+  id: number,
+  data: object
+) => {
+  return http.request("patch", promUrlApi(`groups/${groupId}/records/${id}`), {
+    data
+  });
 };
 
-/** 更新 Target Group */
-export const updateTargetGroup = (id: number, data: object) => {
-  return http.request("patch", promUrlApi(`target-groups/${id}`), { data });
-};
-
-/** 删除 Target Group */
-export const deleteTargetGroup = (id: number) => {
-  return http.request("delete", promUrlApi(`target-groups/${id}`));
-};
-
-/** 查询 Target 列表 */
-export const getTargets = (groupId: string | string[], params: PaginationParams) => {
-  return http.request("get", promUrlApi(`target-groups/${groupId}/targets`), { params });
-};
-
-/** 创建 Target */
-export const createTarget = (groupId: string | string[], data: object) => {
-  return http.request("post", promUrlApi(`target-groups/${groupId}/targets`), { data });
-};
-
-/** 更新 Target */
-export const updateTarget = (groupId: string | string[], id: number, data: object) => {
-  return http.request("patch", promUrlApi(`target-groups/${groupId}/targets/${id}`), { data });
-};
-
-/** 删除 Target */
-export const deleteTarget = (groupId: string | string[], id: number) => {
-  return http.request("delete", promUrlApi(`target-groups/${groupId}/targets/${id}`));
+/** 删除聚合规则 */
+export const deleteRecord = (groupId: string | string[], id: number) => {
+  return http.request("delete", promUrlApi(`groups/${groupId}/records/${id}`));
 };

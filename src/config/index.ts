@@ -31,7 +31,7 @@ export const getPlatformConfig = async (app: App): Promise<undefined> => {
   app.config.globalProperties.$config = getConfig();
   return axios({
     method: "get",
-    url: `${VITE_PUBLIC_PATH}platform-config.json`
+    url: `${VITE_PUBLIC_PATH}platform-config.json?v=${__APP_INFO__.lastBuildTime}`
   })
     .then(({ data: config }) => {
       let $config = app.config.globalProperties.$config;
