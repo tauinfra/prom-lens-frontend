@@ -5,6 +5,10 @@ dist-ssr
 *.local
 .eslintcache
 report.html
+.pnpm-store
+.git
+.github
+.husky
 
 yarn.lock
 npm-debug.log*

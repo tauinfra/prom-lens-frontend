@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: prom-lens
+
+resources:
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: prom-lens
+      app.kubernetes.io/component: frontend
+    includeSelectors: false
+
+images:
+  - name: prom-lens-frontend
+    newName: tau0125/prom-lens-frontend
+    newTag: main-20260701120009
