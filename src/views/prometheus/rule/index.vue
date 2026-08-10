@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick, watch, computed } from "vue";
+import { ref, reactive, onMounted, nextTick, computed } from "vue";
 import {
   getRules,
   createRule,
@@ -18,7 +18,7 @@ import {
   type Pagination
 } from "@/utils/hooks/usePaginatedSearch";
 import { formatDate } from "@/utils/date";
-import { Plus, Refresh } from "@element-plus/icons-vue";
+import { Plus, Refresh, Delete } from "@element-plus/icons-vue";
 
 import { usePromGroupContext } from "../group/hooks";
 
@@ -60,13 +60,146 @@ interface ApiResponse<T = any> {
 
 const { getParameter, isRecording } = usePromGroupContext({ restoreTag: true });
 
-const pageName = computed(() => (isRecording.value ? "聚合规则" : "告警规则"));
-
-const labelsPlaceholder = computed(() =>
-  isRecording.value
-    ? '标签: {"env":"prod"}'
-    : '标签: {"severity":"warning","app":"e","team":"s"}'
+const ruleNameLabel = computed(() =>
+  isRecording.value ? "聚合规则名称" : "告警名称"
 );
+
+const ruleExprLabel = computed(() =>
+  isRecording.value ? "聚合表达式" : "告警规则"
+);
+
+const ruleLabelsLabel = computed(() =>
+  isRecording.value ? "标签" : "告警标签"
+);
+
+interface KeyValueRow {
+  key: string;
+  value: string;
+}
+
+const KV_KEY_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+const createEmptyKvRow = (): KeyValueRow => ({ key: "", value: "" });
+
+const recordToRows = (
+  record: Record<string, string | number | boolean> | undefined
+): KeyValueRow[] => {
+  const entries = Object.entries(record || {});
+  if (!entries.length) {
+    return [createEmptyKvRow()];
+  }
+  return entries.map(([key, value]) => ({
+    key,
+    value: String(value ?? "")
+  }));
+};
+
+const buildRecordFromRows = (
+  rows: KeyValueRow[],
+  options: {
+    fieldName: string;
+    required?: boolean;
+    allowEmpty?: boolean;
+  }
+): Record<string, string> => {
+  const { fieldName, required = false, allowEmpty = true } = options;
+  const normalized = rows
+    .map(row => ({ key: row.key.trim(), value: row.value.trim() }))
+    .filter(row => row.key || row.value);
+
+  for (const row of normalized) {
+    if (!row.key) {
+      throw new Error(`${fieldName} Key 不能为空.`);
+    }
+    if (!KV_KEY_PATTERN.test(row.key)) {
+      throw new Error(
+        `${fieldName} Key「${row.key}」格式不正确，仅支持字母、数字、下划线，且不能以数字开头。`
+      );
+    }
+  }
+
+  const keys = normalized.map(row => row.key);
+  if (new Set(keys).size !== keys.length) {
+    throw new Error(`${fieldName} Key 不能重复.`);
+  }
+
+  if (!normalized.length) {
+    if (required) {
+      throw new Error(`请至少添加一个${fieldName}.`);
+    }
+    if (allowEmpty) {
+      return {};
+    }
+  }
+
+  return Object.fromEntries(normalized.map(row => [row.key, row.value]));
+};
+
+const defaultLabels = (): Rule["labels"] =>
+  isRecording.value ? {} : { severity: "warning" };
+
+const labelRows = ref<KeyValueRow[]>(recordToRows(defaultLabels()));
+
+const setLabelRowsFromLabels = (
+  labels: Record<string, string | number | boolean> | undefined
+) => {
+  labelRows.value = recordToRows(labels);
+};
+
+const buildLabelsFromRows = (): Rule["labels"] => {
+  return buildRecordFromRows(labelRows.value, {
+    fieldName: ruleLabelsLabel.value,
+    required: !isRecording.value,
+    allowEmpty: isRecording.value
+  });
+};
+
+const syncLabelsFromRows = () => {
+  dataForm.labels = buildLabelsFromRows();
+};
+
+const addLabelRow = () => {
+  labelRows.value.push(createEmptyKvRow());
+};
+
+const removeLabelRow = (index: number) => {
+  if (labelRows.value.length <= 1) {
+    labelRows.value[0] = createEmptyKvRow();
+    return;
+  }
+  labelRows.value.splice(index, 1);
+};
+
+const annotationRows = ref<KeyValueRow[]>(recordToRows({}));
+
+const setAnnotationRowsFromRecord = (
+  record: Record<string, string | number | boolean> | undefined
+) => {
+  annotationRows.value = recordToRows(record);
+};
+
+const buildAnnotationsFromRows = (): NonNullable<Rule["extraAnnotations"]> => {
+  return buildRecordFromRows(annotationRows.value, {
+    fieldName: "告警注释",
+    allowEmpty: true
+  });
+};
+
+const syncAnnotationsFromRows = () => {
+  dataForm.extraAnnotations = buildAnnotationsFromRows();
+};
+
+const addAnnotationRow = () => {
+  annotationRows.value.push(createEmptyKvRow());
+};
+
+const removeAnnotationRow = (index: number) => {
+  if (annotationRows.value.length <= 1) {
+    annotationRows.value[0] = createEmptyKvRow();
+    return;
+  }
+  annotationRows.value.splice(index, 1);
+};
 
 // 响应式数据
 const data = ref<Rule[]>([]);
@@ -122,19 +255,31 @@ const formRules = computed<FormRules>(() => {
     name: [
       {
         required: true,
-        message: `请输入${pageName.value}名称.`,
+        message: `请输入${ruleNameLabel.value}.`,
         trigger: "blur"
       }
     ],
     expr: [
       {
         required: true,
-        message: `请输入${pageName.value}表达式.`,
+        message: `请输入${ruleExprLabel.value}.`,
         trigger: "blur"
       }
     ],
     labels: [
-      { required: !isRecording.value, message: "请输入标签.", trigger: "blur" }
+      {
+        validator: (_rule, _value, callback) => {
+          try {
+            syncLabelsFromRows();
+            callback();
+          } catch (error) {
+            callback(
+              error instanceof Error ? error : new Error("告警标签校验失败")
+            );
+          }
+        },
+        trigger: "change"
+      }
     ]
   };
 
@@ -153,6 +298,21 @@ const formRules = computed<FormRules>(() => {
         trigger: "blur"
       }
     ];
+    baseRules.extraAnnotations = [
+      {
+        validator: (_rule, _value, callback) => {
+          try {
+            syncAnnotationsFromRows();
+            callback();
+          } catch (error) {
+            callback(
+              error instanceof Error ? error : new Error("告警注释校验失败")
+            );
+          }
+        },
+        trigger: "change"
+      }
+    ];
   }
 
   return baseRules;
@@ -163,97 +323,43 @@ const dataForm = reactive<Omit<Rule, "id" | "createAt" | "updatedAt">>({
   summary: undefined,
   description: undefined,
   expr: undefined,
-  labels: { severity: "warning" }, // 默认标签，必填
+  labels: defaultLabels(),
   extraAnnotations: {},
   for: "1m",
   status: true
 });
 
-// 用于输入的JSON字符串
-const labelsString = ref("");
-
-const parseLabelsString = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    if (isRecording.value) {
-      return {} as Rule["labels"];
-    }
-    throw new Error("请输入标签.");
-  }
-  const parsed = JSON.parse(trimmed);
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error("标签必须是 JSON 对象");
-  }
-  return parsed as Rule["labels"];
+// 编辑点击事件
+const editClick = (row: Rule) => {
+  currentEditId.value = row.id;
+  Object.assign(dataForm, {
+    ...row,
+    extraAnnotations: row.extraAnnotations || {}
+  });
+  setLabelRowsFromLabels(row.labels);
+  setAnnotationRowsFromRecord(row.extraAnnotations);
+  dialogStatus.value = "update";
+  dialogFormVisible.value = true;
 };
 
-const syncLabelsFromString = () => {
-  dataForm.labels = parseLabelsString(labelsString.value);
-};
-
-// 将对象转换为JSON字符串
-watch(
-  () => dataForm.labels,
-  newVal => {
-    try {
-      labelsString.value = JSON.stringify(newVal, null, 2);
-    } catch {
-      labelsString.value = "";
-    }
-  },
-  { immediate: true }
-);
-
-// 输入过程中尽量同步；提交前仍会再次强制解析
-const handleLabelsChange = (value: string) => {
-  try {
-    dataForm.labels = parseLabelsString(value);
-  } catch {
-    // 输入未完成时不打断编辑
-  }
-};
-
-const extraAnnotationsString = ref("");
-
-const parseExtraAnnotationsString = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return {} as NonNullable<Rule["extraAnnotations"]>;
-  }
-  const parsed = JSON.parse(trimmed);
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error("告警注释必须是 JSON 对象");
-  }
-  return parsed as NonNullable<Rule["extraAnnotations"]>;
-};
-
-const syncExtraAnnotationsFromString = () => {
-  dataForm.extraAnnotations = parseExtraAnnotationsString(
-    extraAnnotationsString.value
-  );
-};
-
-watch(
-  () => dataForm.extraAnnotations,
-  newVal => {
-    try {
-      const value = newVal || {};
-      extraAnnotationsString.value = Object.keys(value).length
-        ? JSON.stringify(value, null, 2)
-        : "";
-    } catch {
-      extraAnnotationsString.value = "";
-    }
-  },
-  { immediate: true }
-);
-
-const handleExtraAnnotationsChange = (value: string) => {
-  try {
-    dataForm.extraAnnotations = parseExtraAnnotationsString(value);
-  } catch {
-    // 输入未完成时不打断编辑
-  }
+// 重置表单
+const resetForm = () => {
+  const labels = defaultLabels();
+  Object.assign(dataForm, {
+    name: undefined,
+    summary: undefined,
+    description: undefined,
+    expr: undefined,
+    labels,
+    extraAnnotations: {},
+    for: "1m",
+    status: true
+  });
+  setLabelRowsFromLabels(labels);
+  setAnnotationRowsFromRecord({});
+  nextTick(() => {
+    dataFormRef.value?.clearValidate();
+  });
 };
 
 // 创建点击事件
@@ -264,34 +370,6 @@ const addClick = () => {
 };
 
 const refreshClick = () => refresh();
-
-// 编辑点击事件
-const editClick = (row: Rule) => {
-  currentEditId.value = row.id;
-  Object.assign(dataForm, {
-    ...row,
-    extraAnnotations: row.extraAnnotations || {}
-  });
-  dialogStatus.value = "update";
-  dialogFormVisible.value = true;
-};
-
-// 重置表单
-const resetForm = () => {
-  Object.assign(dataForm, {
-    name: undefined,
-    summary: undefined,
-    description: undefined,
-    expr: undefined,
-    labels: isRecording.value ? {} : { severity: "warning" },
-    extraAnnotations: {},
-    for: "1m",
-    status: true
-  });
-  nextTick(() => {
-    dataFormRef.value?.clearValidate();
-  });
-};
 
 // 对话框关闭回调
 const handleDialogClosed = () => {
@@ -317,9 +395,9 @@ const handleFormSubmit = async (
 
   try {
     // 2. 先将输入框中的 JSON 同步到表单，避免未失焦时只保存部分内容
-    syncLabelsFromString();
+    syncLabelsFromRows();
     if (!isRecording.value) {
-      syncExtraAnnotationsFromString();
+      syncAnnotationsFromRows();
     }
 
     await formEl.validate();
@@ -425,7 +503,7 @@ const handleDelete = async (rowId: number) => {
 <template>
   <div class="app-container">
     <div class="filter-container">
-      <div style=" float: right;min-width: 350px; margin-bottom: 10px">
+      <div style="float: right; min-width: 350px; margin-bottom: 10px">
         <el-input
           v-model="pagination.keyword"
           size="small"
@@ -469,22 +547,6 @@ const handleDelete = async (rowId: number) => {
               }}</span>
               <span class="rule-expand__value">{{ row.expr || "-" }}</span>
             </div>
-            <div class="rule-expand__line">
-              <span class="rule-expand__label">标签:</span>
-              <span class="rule-expand__value">
-                <el-tag
-                  v-for="(v, k) in row.labels || {}"
-                  :key="k"
-                  type="info"
-                  effect="light"
-                  size="small"
-                  class="rule-expand__tag"
-                >
-                  {{ k }}: {{ v }}
-                </el-tag>
-                <span v-if="!Object.keys(row.labels || {}).length">-</span>
-              </span>
-            </div>
             <div v-if="!isRecording" class="rule-expand__line">
               <span class="rule-expand__label">告警注释:</span>
               <span class="rule-expand__value">
@@ -506,7 +568,22 @@ const handleDelete = async (rowId: number) => {
           </div>
         </template>
       </el-table-column>
-      <el-table-column prop="name" :label="`${pageName}名称`" />
+      <el-table-column prop="name" :label="ruleNameLabel" />
+      <el-table-column :label="ruleLabelsLabel" min-width="200">
+        <template #default="{ row }">
+          <el-tag
+            v-for="(v, k) in row.labels || {}"
+            :key="k"
+            type="info"
+            effect="light"
+            size="small"
+            class="rule-expand__tag"
+          >
+            {{ k }}: {{ v }}
+          </el-tag>
+          <span v-if="!Object.keys(row.labels || {}).length">-</span>
+        </template>
+      </el-table-column>
       <el-table-column
         v-if="!isRecording"
         prop="labels"
@@ -603,7 +680,7 @@ const handleDelete = async (rowId: number) => {
     >
       <el-form ref="dataFormRef" :model="dataForm" :rules="formRules">
         <el-form-item
-          :label="`${pageName}名称`"
+          :label="ruleNameLabel"
           prop="name"
           :label-width="formLabelWidth"
         >
@@ -626,19 +703,47 @@ const handleDelete = async (rowId: number) => {
           <el-input v-model="dataForm.description" />
         </el-form-item>
         <el-form-item
-          :label="`${pageName}表达式`"
+          :label="ruleExprLabel"
           prop="expr"
           :label-width="formLabelWidth"
         >
           <el-input v-model="dataForm.expr" />
         </el-form-item>
-        <el-form-item label="标签" prop="labels" :label-width="formLabelWidth">
-          <el-input
-            v-model="labelsString"
-            :placeholder="labelsPlaceholder"
-            @input="handleLabelsChange"
-            @blur="syncLabelsFromString"
-          />
+        <el-form-item
+          :label="ruleLabelsLabel"
+          prop="labels"
+          :label-width="formLabelWidth"
+        >
+          <div class="kv-rows">
+            <div
+              v-for="(row, index) in labelRows"
+              :key="index"
+              class="kv-rows__item"
+            >
+              <el-input
+                v-model="row.key"
+                placeholder="Key，如 severity"
+                class="kv-rows__key"
+              />
+              <el-input
+                v-model="row.value"
+                placeholder="Value，如 warning"
+                class="kv-rows__value"
+              />
+              <el-button
+                link
+                type="danger"
+                :icon="Delete"
+                @click="removeLabelRow(index)"
+              >
+                删除
+              </el-button>
+            </div>
+            <el-button type="primary" link @click="addLabelRow">
+              <el-icon><Plus /></el-icon>
+              添加{{ ruleLabelsLabel }}
+            </el-button>
+          </div>
         </el-form-item>
         <el-form-item
           v-if="!isRecording"
@@ -646,12 +751,36 @@ const handleDelete = async (rowId: number) => {
           prop="extraAnnotations"
           :label-width="formLabelWidth"
         >
-          <el-input
-            v-model="extraAnnotationsString"
-            placeholder='告警注释: {"runbook_url":"https://wiki.example.com/runbook/cpu","owner":"platform"}'
-            @input="handleExtraAnnotationsChange"
-            @blur="syncExtraAnnotationsFromString"
-          />
+          <div class="kv-rows">
+            <div
+              v-for="(row, index) in annotationRows"
+              :key="index"
+              class="kv-rows__item"
+            >
+              <el-input
+                v-model="row.key"
+                placeholder="Key，如 runbook_url"
+                class="kv-rows__key"
+              />
+              <el-input
+                v-model="row.value"
+                placeholder="Value"
+                class="kv-rows__value"
+              />
+              <el-button
+                link
+                type="danger"
+                :icon="Delete"
+                @click="removeAnnotationRow(index)"
+              >
+                删除
+              </el-button>
+            </div>
+            <el-button type="primary" link @click="addAnnotationRow">
+              <el-icon><Plus /></el-icon>
+              添加告警注释
+            </el-button>
+          </div>
         </el-form-item>
         <el-form-item
           v-if="!isRecording"
@@ -721,5 +850,23 @@ const handleDelete = async (rowId: number) => {
 .rule-expand__tag {
   margin-right: 4px;
   margin-bottom: 4px;
+}
+
+.kv-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.kv-rows__item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.kv-rows__key,
+.kv-rows__value {
+  flex: 1;
 }
 </style>

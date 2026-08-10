@@ -96,3 +96,66 @@ export const updateRecord = (
 export const deleteRecord = (groupId: string | string[], id: number) => {
   return http.request("delete", promUrlApi(`groups/${groupId}/records/${id}`));
 };
+
+/** 查询采集目标组列表 */
+export const getTargetGroups = (params: PaginationParams) => {
+  return http.request("get", promUrlApi("target-groups"), { params });
+};
+
+/** 查询采集目标组 */
+export const getTargetGroup = (id: number) => {
+  return http.request("get", promUrlApi(`target-groups/${id}`));
+};
+
+/** 创建采集目标组 */
+export const createTargetGroup = (data: object) => {
+  return http.request("post", promUrlApi("target-groups"), { data });
+};
+
+/** 更新采集目标组 */
+export const updateTargetGroup = (id: number, data: object) => {
+  return http.request("patch", promUrlApi(`target-groups/${id}`), { data });
+};
+
+/** 删除采集目标组 */
+export const deleteTargetGroup = (id: number) => {
+  return http.request("delete", promUrlApi(`target-groups/${id}`));
+};
+
+/** 查询采集目标列表 */
+export const getTargets = (
+  groupId: string | string[],
+  params: PaginationParams
+) => {
+  return http.request("get", promUrlApi(`target-groups/${groupId}/targets`), {
+    params
+  });
+};
+
+/** 创建采集目标 */
+export const createTarget = (groupId: string | string[], data: object) => {
+  return http.request("post", promUrlApi(`target-groups/${groupId}/targets`), {
+    data
+  });
+};
+
+/** 更新采集目标 */
+export const updateTarget = (
+  groupId: string | string[],
+  id: number,
+  data: object
+) => {
+  return http.request(
+    "patch",
+    promUrlApi(`target-groups/${groupId}/targets/${id}`),
+    { data }
+  );
+};
+
+/** 删除采集目标 */
+export const deleteTarget = (groupId: string | string[], id: number) => {
+  return http.request(
+    "delete",
+    promUrlApi(`target-groups/${groupId}/targets/${id}`)
+  );
+};

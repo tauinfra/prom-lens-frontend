@@ -16,6 +16,8 @@ import RiClipboardLine from "~icons/ri/clipboard-line?raw";
 import RiUserLine from "~icons/ri/user-line?raw";
 import RiAlarmWarningLine from "~icons/ri/alarm-warning-line?raw";
 import RiBarChartGroupedLine from "~icons/ri/bar-chart-grouped-line?raw";
+import RiRadarLine from "~icons/ri/radar-line?raw";
+import RiServerLine from "~icons/ri/server-line?raw";
 import LogosPrometheus from "~icons/logos/prometheus?raw";
 
 const icons = [
@@ -32,6 +34,8 @@ const icons = [
   ["ri/user-line", RiUserLine],
   ["ri/alarm-warning-line", RiAlarmWarningLine],
   ["ri/bar-chart-grouped-line", RiBarChartGroupedLine],
+  ["ri/radar-line", RiRadarLine],
+  ["ri/server-line", RiServerLine],
   ["logos/prometheus", LogosPrometheus]
 ];
 

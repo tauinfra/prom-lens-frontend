@@ -51,6 +51,27 @@ export default {
         showParent: true,
         groupType: PROM_GROUP_TYPES.RECORDING
       }
+    },
+    {
+      path: "/prometheus/target-groups",
+      name: "PromTargetGroup",
+      component: () => import("@/views/prometheus/target-group/index.vue"),
+      meta: {
+        title: "采集目标组",
+        showParent: true,
+        icon: "ri/radar-line"
+      }
+    },
+    {
+      path: "/prometheus/target-groups/:id/targets",
+      name: "PromTarget",
+      component: () => import("@/views/prometheus/target/index.vue"),
+      meta: {
+        title: "采集目标",
+        showLink: false,
+        showParent: true,
+        icon: "ri/server-line"
+      }
     }
   ]
 } satisfies RouteConfigsTable;
